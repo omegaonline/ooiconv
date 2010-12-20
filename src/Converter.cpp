@@ -116,10 +116,13 @@ namespace
 			for (int last_err = 0;outBytes != 0;)
 			{
 				// Read more...
+				if (m_strIn.size() < outBytes)
 				{
 					byte_t buf[1024] = {0};
 					size_t r = m_ptrInput->ReadBytes(uint32_t(sizeof(buf)),buf);
-					if (r == 0)
+					if (r != 0)
+						m_strIn.append(reinterpret_cast<char*>(buf),r);
+					else
 					{
 						// No more...
 						if (last_err == EINVAL)
@@ -129,13 +132,12 @@ namespace
 							pNew->m_strDesc = L"Input conversion stopped due to an incomplete character or shift sequence at the end of the input buffer.";
 							throw static_cast<IConv::IIncompleteInputException*>(pNew);
 						}
+
 						break;
 					}
 
 					// Clear last error
-					last_err = 0;
-
-					m_strIn.append(reinterpret_cast<char*>(buf),r);
+					last_err = 0;				
 				}
 
 				const char* inBuf = m_strIn.c_str();
