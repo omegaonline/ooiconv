@@ -56,132 +56,137 @@ namespace
 			INTERFACE_ENTRY_CHAIN(ExceptionImpl<IConv::IIncompleteInputException>)
 		END_INTERFACE_MAP()
 	};
-
-	class TranscodeInputStream :
-			public ObjectBase,
-			public IO::IInputStream
-	{
-	public:
-		TranscodeInputStream() :
-				m_cd(iconv_t(-1))
-		{}
-
-		virtual ~TranscodeInputStream()
-		{
-			if (m_cd != iconv_t(-1))
-				iconv_close(m_cd);
-		}
-
-		void init(IO::IInputStream* ptrInput, const string_t& strFrom, const string_t& strTo)
-		{
-			m_cd = iconv_open(strTo.ToNative().c_str(),strFrom.ToNative().c_str());
-			if (m_cd == iconv_t(-1))
-			{
-				if (errno == EINVAL)
-				{
-					// No conversion
-					ObjectImpl<NoConversionException>* pNew = ObjectImpl<NoConversionException>::CreateInstance();
-					pNew->m_strDesc = L"Cannot convert from encoding '{0}' to encoding '{1}'";
-					pNew->m_strDesc %= strFrom;
-					pNew->m_strDesc %= strTo;
-					throw static_cast<IConv::INoConversionException*>(pNew);
-				}
-				
-				throw ISystemException::Create(errno);
-			}
-
-			m_ptrInput = ptrInput;
-			m_strFrom = strFrom;
-		}
-
-		BEGIN_INTERFACE_MAP(TranscodeInputStream)
-			INTERFACE_ENTRY(IO::IInputStream)
-		END_INTERFACE_MAP()
-
-	private:
-		Threading::Mutex            m_lock;
-		iconv_t                     m_cd;
-		ObjectPtr<IO::IInputStream> m_ptrInput;	
-		std::string                 m_strIn;
-		string_t                    m_strFrom;
-
-	public:
-		uint32_t ReadBytes(uint32_t lenBytes, byte_t* data)
-		{
-			size_t outBytes = lenBytes;
-			char*  outBuf = reinterpret_cast<char*>(data);
-			
-			Threading::Guard<Threading::Mutex> guard(m_lock);
-			
-			for (int last_err = 0;outBytes != 0;)
-			{
-				// Read more...
-				if (m_strIn.size() < outBytes)
-				{
-					byte_t buf[1024] = {0};
-					size_t r = m_ptrInput->ReadBytes(uint32_t(sizeof(buf)),buf);
-					if (r != 0)
-						m_strIn.append(reinterpret_cast<char*>(buf),r);
-					else
-					{
-						// No more...
-						if (last_err == EINVAL)
-						{
-							// Incomplete input
-							ObjectImpl<IncompleteInputException>* pNew = ObjectImpl<IncompleteInputException>::CreateInstance();
-							pNew->m_strDesc = L"Input conversion stopped due to an incomplete character or shift sequence at the end of the input buffer.";
-							throw static_cast<IConv::IIncompleteInputException*>(pNew);
-						}
-
-						break;
-					}
-
-					// Clear last error
-					last_err = 0;				
-				}
-
-				const char* inBuf = m_strIn.c_str();
-				size_t inBytes = m_strIn.size();
-				if (iconv(m_cd,&inBuf,&inBytes,&outBuf,&outBytes) == size_t(-1))
-				{
-					if (errno == E2BIG)
-						break;
-
-					switch (errno)
-					{
-					case EINVAL:
-						// Remember...
-						last_err = errno;
-						break;
-
-					case EILSEQ:
-						{
-							// Illegal input
-							ObjectImpl<IllegalInputException>* pNew = ObjectImpl<IllegalInputException>::CreateInstance();
-							pNew->m_strDesc = L"Input conversion stopped due to an input byte '{0}' that does not belong to the input codeset '{1}'.";
-							pNew->m_strDesc %= static_cast<uint8_t>(*inBuf);
-							pNew->m_strDesc %= m_strFrom;
-							throw static_cast<IConv::IIllegalInputException*>(pNew);
-						}
-					
-					default:
-						throw ISystemException::Create(errno);
-					}
-				}
-
-				// Drop off what we have used
-				m_strIn.erase(0,inBuf - m_strIn.c_str());
-			}
-			
-			return static_cast<uint32_t>(lenBytes - outBytes);
-		}
-	};
 }
 
-string_t Converter::ToString(const string_t& strEncoding, IO::IInputStream* inStream)
+Converter::Converter() :
+		m_cd(iconv_t(-1))
+{}
+
+Converter::~Converter()
 {
-	ObjectPtr<IO::IInputStream> ptrInput;
-	ptrInput.Attach(TranscodeStream(strEncoding,L"wchar_t",inStream));
+	if (m_cd != iconv_t(-1))
+		iconv_close(m_cd);
+}
+
+void Converter::SetTranscoding(const Omega::string_t& strFrom, const Omega::string_t& strTo)
+{
+	iconv_t cd = iconv_open(strTo.ToNative().c_str(),strFrom.ToNative().c_str());
+	if (cd == iconv_t(-1))
+	{
+		if (errno == EINVAL)
+		{
+			// No conversion
+			ObjectImpl<NoConversionException>* pNew = ObjectImpl<NoConversionException>::CreateInstance();
+			pNew->m_strDesc = L"Cannot convert from encoding '{0}' to encoding '{1}'";
+			pNew->m_strDesc %= strFrom;
+			pNew->m_strDesc %= strTo;
+			throw static_cast<IConv::INoConversionException*>(pNew);
+		}
+		
+		throw ISystemException::Create(errno);
+	}
+
+	Threading::Guard<Threading::Mutex> guard(m_lock);
+
+	if (m_cd != iconv_t(-1))
+		iconv_close(m_cd);
+
+	m_cd = cd;
+	m_strFrom = strFrom;
+}
+
+void Converter::SetInputStream(Omega::IO::IInputStream* pInStream)
+{
+	Threading::Guard<Threading::Mutex> guard(m_lock);
+
+	m_ptrInput = pInStream;
+	m_strIn.clear();
+}
+
+uint32_t Converter::ReadBytes(uint32_t lenBytes, byte_t* data)
+{
+	size_t outBytes = lenBytes;
+	char*  outBuf = reinterpret_cast<char*>(data);
+	
+	Threading::Guard<Threading::Mutex> guard(m_lock);
+
+	if (!m_ptrInput)
+		return 0;
+	
+	for (int last_err = 0;outBytes != 0;)
+	{
+		// Read more...
+		if (m_strIn.size() < outBytes)
+		{
+			// Try not to over-read... obviously this will struggle when the output encoding is wider than the input encoding.
+			byte_t buf[1024] = {0};
+			size_t r = outBytes;
+			if (r > 1024)
+				r = 1024;
+
+			r = m_ptrInput->ReadBytes(uint32_t(r),buf);
+			if (r != 0)
+				m_strIn.append(reinterpret_cast<char*>(buf),r);
+			else
+			{
+				// No more...
+				if (last_err == EINVAL)
+				{
+					// Incomplete input
+					ObjectImpl<IncompleteInputException>* pNew = ObjectImpl<IncompleteInputException>::CreateInstance();
+					pNew->m_strDesc = L"Input conversion stopped due to an incomplete character or shift sequence at the end of the input buffer.";
+					throw static_cast<IConv::IIncompleteInputException*>(pNew);
+				}
+
+				break;
+			}
+
+			// Clear last error
+			last_err = 0;				
+		}
+
+		const char* inBuf = m_strIn.c_str();
+		size_t inBytes = m_strIn.size();
+		if (iconv(m_cd,&inBuf,&inBytes,&outBuf,&outBytes) == size_t(-1))
+		{
+			if (errno == E2BIG)
+				break;
+
+			switch (errno)
+			{
+			case EINVAL:
+				// Remember...
+				last_err = errno;
+				break;
+
+			case EILSEQ:
+				{
+					// Illegal input
+					ObjectImpl<IllegalInputException>* pNew = ObjectImpl<IllegalInputException>::CreateInstance();
+					pNew->m_strDesc = L"Input conversion stopped due to an input byte '{0}' that does not belong to the input codeset '{1}'.";
+					pNew->m_strDesc %= static_cast<uint8_t>(*inBuf);
+					pNew->m_strDesc %= m_strFrom;
+					throw static_cast<IConv::IIllegalInputException*>(pNew);
+				}
+			
+			default:
+				throw ISystemException::Create(errno);
+			}
+		}
+
+		// Drop off what we have used
+		m_strIn.erase(0,inBuf - m_strIn.c_str());
+	}
+	
+	return static_cast<uint32_t>(lenBytes - outBytes);
+}
+
+OMEGA_DEFINE_EXPORTED_FUNCTION(string_t,OOIConv_ToString,2,((in),const string_t&,strEncoding,(in),IO::IInputStream*,pInStream))
+{
+	ObjectPtr<ObjectImpl<Converter> > ptrInput = ObjectImpl<Converter>::CreateInstancePtr();
+
+	ptrInput->SetTranscoding(strEncoding,L"wchar_t");
+	ptrInput->SetInputStream(pInStream);
 
 	for (string_t ret;;)
 	{
@@ -191,14 +196,5 @@ string_t Converter::ToString(const string_t& strEncoding, IO::IInputStream* inSt
 			return ret;
 
 		ret += string_t(reinterpret_cast<const wchar_t*>(szBuf),r / sizeof(wchar_t));
-	}	
-}
-
-IO::IInputStream* Converter::TranscodeStream(const string_t& strFrom, const string_t& strTo, IO::IInputStream* inStream)
-{
-	ObjectPtr<ObjectImpl<TranscodeInputStream> > ptrRet = ObjectImpl<TranscodeInputStream>::CreateInstancePtr();
-
-	ptrRet->init(inStream,strFrom,strTo);
-
-	return ptrRet.AddRef();
+	}
 }

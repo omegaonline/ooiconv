@@ -37,19 +37,30 @@ class Converter :
 		public Omega::IConv::IConverter
 {
 public:
-	Converter()
-	{
-	}
+	Converter();
+	virtual ~Converter();
 
 	BEGIN_INTERFACE_MAP(Converter)
+		INTERFACE_ENTRY(Omega::IO::IInputStream)
 		INTERFACE_ENTRY(Omega::IConv::IConverter)
 		INTERFACE_ENTRY(Omega::TypeInfo::IProvideObjectInfo)
 	END_INTERFACE_MAP()
 
+private:
+	Omega::Threading::Mutex                 m_lock;
+	iconv_t                                 m_cd;
+	OTL::ObjectPtr<Omega::IO::IInputStream> m_ptrInput;	
+	std::string                             m_strIn;
+	Omega::string_t                         m_strFrom;
+
 	// IConverter methods
 public:
-	virtual Omega::string_t ToString(const Omega::string_t& strEncoding, Omega::IO::IInputStream* inStream);
-	virtual Omega::IO::IInputStream* TranscodeStream(const Omega::string_t& strFrom, const Omega::string_t& strTo, Omega::IO::IInputStream* inStream);
+	virtual void SetTranscoding(const Omega::string_t& strFrom, const Omega::string_t& strTo);
+	virtual void SetInputStream(Omega::IO::IInputStream* pInStream);
+
+	// IO::IInputStream methods
+public:
+	virtual Omega::uint32_t ReadBytes(Omega::uint32_t lenBytes, Omega::byte_t* data);
 };
 
 

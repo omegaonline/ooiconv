@@ -24,6 +24,8 @@
 
 #include <iconv.h>
 
+#define OOICONV_INTERNAL
+
 #include <Omega/IO.h>
 #include <OTL/Exception.h>
 
