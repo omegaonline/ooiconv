@@ -1,6 +1,6 @@
 ///////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2007 Rick Taylor
+// Copyright (C) 2011 Rick Taylor
 //
 // This file is part of OOIConv, the Omega Online IConv wrapper library.
 //
@@ -19,9 +19,32 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
-#include "ooiconv_precomp.h"
+///////////////////////////////////////////////////////////////////////////////////
+//
+// This library wraps the GNU LIBICONV Library from the Free Software Foundation, Inc.
+//
+// The GNU LIBICONV Library is free software; you can redistribute it
+// and/or modify it under the terms of the GNU Library General Public
+// License as published by the Free Software Foundation; either version 2
+// of the License, or (at your option) any later version.
+//
+// The GNU LIBICONV Library is distributed in the hope that it will be
+// useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Library General Public License for more details.
+//
+// You should have received a copy of the GNU Library General Public
+// License along with the GNU LIBICONV Library; see the file COPYING.LIB.
+// If not, write to the Free Software Foundation, Inc., 51 Franklin Street,
+// Fifth Floor, Boston, MA 02110-1301, USA.
+//
+///////////////////////////////////////////////////////////////////////////////////
 
 #include "Converter.h"
+
+BEGIN_LIBRARY_OBJECT_MAP()
+	OBJECT_MAP_ENTRY(Converter)
+END_LIBRARY_OBJECT_MAP()
 
 OMEGA_DEFINE_OID(Omega::IConv, OID_IConv, "{77A15551-E8F4-46D1-8991-7CDC07BE8EC3}");
 
@@ -68,7 +91,7 @@ Converter::~Converter()
 		iconv_close(m_cd);
 }
 
-void Converter::SetTranscoding(const Omega::string_t& strFrom, const Omega::string_t& strTo)
+void Converter::SetTranscoding(const string_t& strFrom, const string_t& strTo)
 {
 	iconv_t cd = iconv_open(strTo.c_nstr(),strFrom.c_nstr());
 	if (cd == iconv_t(-1))
@@ -95,7 +118,7 @@ void Converter::SetTranscoding(const Omega::string_t& strFrom, const Omega::stri
 	m_strFrom = strFrom;
 }
 
-void Converter::SetInputStream(Omega::IO::IInputStream* pInStream)
+void Converter::SetInputStream(IO::IInputStream* pInStream)
 {
 	Threading::Guard<Threading::Mutex> guard(m_lock);
 
@@ -181,20 +204,26 @@ uint32_t Converter::ReadBytes(uint32_t lenBytes, byte_t* data)
 	return static_cast<uint32_t>(lenBytes - outBytes);
 }
 
-OMEGA_DEFINE_EXPORTED_FUNCTION(string_t,OOIConv_ToString,2,((in),const string_t&,strEncoding,(in),IO::IInputStream*,pInStream))
+string_t Converter::ConvertStream(const string_t& strEncoding, IO::IInputStream* inStream)
 {
-	ObjectPtr<ObjectImpl<Converter> > ptrInput = ObjectImpl<Converter>::CreateInstancePtr();
-
-	ptrInput->SetTranscoding(strEncoding,L"wchar_t");
-	ptrInput->SetInputStream(pInStream);
-
+	SetTranscoding(strEncoding,L"wchar_t");
+	SetInputStream(inStream);
+	
 	for (string_t ret;;)
 	{
 		byte_t szBuf[256*sizeof(wchar_t)] = {0};
-		uint32_t r = ptrInput->ReadBytes(uint32_t(sizeof(szBuf)),szBuf);
+		uint32_t r = ReadBytes(uint32_t(sizeof(szBuf)),szBuf);
 		if (r == 0)
 			return ret;
 
 		ret += string_t(reinterpret_cast<const wchar_t*>(szBuf),r / sizeof(wchar_t));
 	}
+}
+
+string_t Converter::ConvertBuffer(const string_t& strEncoding, uint32_t len, const byte_t* bytes)
+{
+	ObjectPtr<IO::IInputStream> ptrIn;
+	ptrIn.Attach(Create(len,bytes,false));
+	
+	return ConvertStream(strEncoding,ptrIn);	
 }

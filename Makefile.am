@@ -1,6 +1,6 @@
-ACLOCAL_AMFLAGS = -I m4
+include @top_srcdir@/m4/ltrc.inc
 
-SUBDIRS = src
+ACLOCAL_AMFLAGS = -I m4
 
 EXTRA_DIST = \
 	lgpl3_0.txt
@@ -8,26 +8,23 @@ EXTRA_DIST = \
 ####################################
 # Some helper targets
 
-gitbundle:
-	git bundle create ooiconv.git --all
-
 astyle:
 	astyle -A1 -T4 -K -N -w -U -c -n -R $(srcdir)/*.h
-	astyle -A1 -T4 -K -N -w -U -c -n -R $(srcdir)/*.inl
 	astyle -A1 -T4 -K -N -w -U -c -n -R $(srcdir)/*.cpp
 
 reallyclean: maintainer-clean
-	rm -f $(srcdir)/Makefile.in
-	rm -f $(srcdir)/aclocal.m4
-	rm -f $(srcdir)/configure
-	rm -f $(srcdir)/m4/libtool.m4
-	rm -f $(srcdir)/m4/ltoptions.m4
-	rm -f $(srcdir)/m4/ltsugar.m4
-	rm -f $(srcdir)/m4/ltversion.m4
-	rm -f $(srcdir)/m4/lt~obsolete.m4
-	rm -f $(srcdir)/autoheader_dummy.h.in
-	rm -f $(srcdir)/autoheader_dummy.h.in~
-
+	rm -f @srcdir@/Makefile.in
+	rm -f @srcdir@/aclocal.m4
+	rm -f @srcdir@/configure
+	rm -f @srcdir@/m4/argz.m4
+	rm -f @srcdir@/m4/libtool.m4
+	rm -f @srcdir@/m4/ltoptions.m4
+	rm -f @srcdir@/m4/ltsugar.m4
+	rm -f @srcdir@/m4/ltversion.m4
+	rm -f @srcdir@/m4/lt~obsolete.m4
+	rm -f @srcdir@/autoheader_dummy.h.in
+	rm -f @srcdir@/autoheader_dummy.h.in~
+	
 ####################################
 # Hook to make the ChangeLog
 dist-hook:
@@ -49,3 +46,28 @@ dist-hook:
 omegadir = @includedir@/Omega
 omega_HEADERS = \
 	include\IConv.h
+
+omegalibexecdir = @libexecdir@/omegaonline
+
+omegalibexec_LTLIBRARIES = ooiconv.la
+
+ooiconv_la_SOURCES = \
+	src/Converter.h \
+	src/Converter.cpp
+	
+ooiconv_la_CXXFLAGS = $(PTHREAD_CFLAGS) $(INCICONV)
+ooiconv_la_LDFLAGS = -module -no-undefined $(PTHREAD_LIBS)
+
+if WIN32
+
+ooiconv_la_SOURCES += src/OOIConv_res.rc
+
+# All this -Wl,-l shenanigans is to get the static lib of iconv linked into the dll
+ooiconv_la_LDFLAGS += -Wl,-l:libcharset.a -Wl,-l:libiconv.a -Wl,-lgcc -Wl,-lmingwex -Wl,-lmsvcrt -Wl,-lkernel32 -Wl,-l:OOCore.dll.a -avoid-version
+
+else
+
+ooiconv_la_LIBADD = -loocore $(LIBICONV)
+ooiconv_la_LDFLAGS += -release $(VERSION) -rpath /nowhere
+
+endif

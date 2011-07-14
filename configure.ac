@@ -1,12 +1,12 @@
 AC_PREREQ(2.61)
 
 AC_INIT(OOIConv,0.1.0)
-AC_CONFIG_SRCDIR([src/ooiconv.cpp])
+AC_CONFIG_SRCDIR([src/Converter.cpp])
 AC_CONFIG_HEADERS([autoheader_dummy.h])
 
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_MACRO_DIR([m4])
-AC_CONFIG_FILES([Makefile src/Makefile])
+AC_CONFIG_FILES([Makefile])
 
 AM_INIT_AUTOMAKE([foreign 1.10 no-define])
 
@@ -94,7 +94,7 @@ AS_IF([test "x$oo_test_CXXFLAGS" != "xset"],
 ])
 
 # Add debug defines
-AS_IF([test "x$debug" = "xtrue"],[CPPFLAGS="$CPPFLAGS -DOMEGA_DEBUG"],[CPPFLAGS="$CPPFLAGS -DNDEBUG"])
+AS_IF([test "x$debug" != "xtrue"],[CPPFLAGS="$CPPFLAGS -DNDEBUG"])
 
 # Set up libtool correctly
 m4_ifdef([LT_PREREQ],,[AC_MSG_ERROR([Need libtool version 2.2.6 or later])])

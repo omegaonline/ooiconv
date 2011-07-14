@@ -1,6 +1,6 @@
 ///////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2007 Rick Taylor
+// Copyright (C) 2007,2011 Rick Taylor
 //
 // This file is part of OOIConv, the Omega Online IConv wrapper library.
 //
@@ -55,10 +55,14 @@ namespace Omega
 		{
 			virtual void SetTranscoding(const string_t& strFrom, const string_t& strTo) = 0;
 			virtual void SetInputStream(IO::IInputStream* pInStream) = 0;
-
-			static string_t ToString(const string_t& strEncoding, IO::IInputStream* inStream);
 		};
-
+		
+		interface IStringConverter : public IObject
+		{
+			virtual string_t ConvertStream(const string_t& strEncoding, IO::IInputStream* inStream) = 0;
+			virtual string_t ConvertBuffer(const string_t& strEncoding, uint32_t len, const byte_t* bytes) = 0;
+		};
+		
 		interface INoConversionException : public IException
 		{
 		};
@@ -82,6 +86,15 @@ OMEGA_DEFINE_INTERFACE_DERIVED
 	OMEGA_METHOD_VOID(SetInputStream,1,((in),IO::IInputStream*,pInStream))
 )
 
+OMEGA_DEFINE_INTERFACE
+(
+	Omega::IConv, IStringConverter, "{B8595F79-2794-4853-999B-BE903BBA7BF8}",
+
+	// Methods
+	OMEGA_METHOD(string_t,ConvertStream,2,((in),const string_t&,strEncoding,(in),IO::IInputStream*,inStream))
+	OMEGA_METHOD(string_t,ConvertBuffer,3,((in),const string_t&,strEncoding,(in),uint32_t,len,(in)(size_is(len)),const byte_t*,bytes))
+)
+
 OMEGA_DEFINE_INTERFACE_DERIVED
 (
 	Omega::IConv, INoConversionException, Omega, IException, "{4DD88926-34CE-4B8F-8917-D060F3BB9C95}",
@@ -102,23 +115,5 @@ OMEGA_DEFINE_INTERFACE_DERIVED
 
 	OMEGA_NO_METHODS()
 )
-
-#if defined(OOICONV_INTERNAL)
-
-#define OOICONV_EXPORTED_FUNCTION(ret_type,name,param_count,params) \
-	OMEGA_LOCAL_FUNCTION(ret_type,name,param_count,params)
-
-#else
-
-#define OOICONV_EXPORTED_FUNCTION(ret_type,name,param_count,params) \
-	OMEGA_EXPORTED_FUNCTION_IMPL(ret_type,name,param_count,params)
-
-#endif
-
-OOICONV_EXPORTED_FUNCTION(Omega::string_t,OOIConv_ToString,2,((in),const Omega::string_t&,strEncoding,(in),Omega::IO::IInputStream*,pInStream))
-inline Omega::string_t Omega::IConv::IConverter::ToString(const string_t& strEncoding, IO::IInputStream* pInStream)
-{
-	return OOIConv_ToString(strEncoding,pInStream);
-}
 
 #endif // OMEGA_GNU_ICONV_H_INCLUDED_
