@@ -70,7 +70,7 @@ Converter::~Converter()
 
 void Converter::SetTranscoding(const Omega::string_t& strFrom, const Omega::string_t& strTo)
 {
-	iconv_t cd = iconv_open(strTo.ToNative().c_str(),strFrom.ToNative().c_str());
+	iconv_t cd = iconv_open(strTo.c_nstr(),strFrom.c_nstr());
 	if (cd == iconv_t(-1))
 	{
 		if (errno == EINVAL)
