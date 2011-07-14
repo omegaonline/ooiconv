@@ -43,9 +43,7 @@
 #if !defined(OMEGA_GNU_ICONV_H_INCLUDED_)
 #define OMEGA_GNU_ICONV_H_INCLUDED_
 
-#if !defined(OMEGA_IO_H_INCLUDED_)
-#include "./IO.h"
-#endif
+#include <Omega/IO.h>
 
 namespace Omega
 {
