@@ -57,7 +57,7 @@ namespace Omega
 		
 		interface IStringConverter : public IObject
 		{
-			virtual string_t ConvertStream(const string_t& strEncoding, IO::IInputStream* inStream) = 0;
+			virtual string_t ConvertStream(const string_t& strEncoding, IO::IInputStream* pInStream) = 0;
 			virtual string_t ConvertBuffer(const string_t& strEncoding, uint32_t len, const byte_t* bytes) = 0;
 		};
 		
@@ -89,7 +89,7 @@ OMEGA_DEFINE_INTERFACE
 	Omega::IConv, IStringConverter, "{B8595F79-2794-4853-999B-BE903BBA7BF8}",
 
 	// Methods
-	OMEGA_METHOD(string_t,ConvertStream,2,((in),const string_t&,strEncoding,(in),IO::IInputStream*,inStream))
+	OMEGA_METHOD(string_t,ConvertStream,2,((in),const string_t&,strEncoding,(in),IO::IInputStream*,pInStream))
 	OMEGA_METHOD(string_t,ConvertBuffer,3,((in),const string_t&,strEncoding,(in),uint32_t,len,(in)(size_is(len)),const byte_t*,bytes))
 )
 
