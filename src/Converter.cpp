@@ -105,7 +105,7 @@ void Converter::SetTranscoding(const string_t& strFrom, const string_t& strTo)
 			pNew->m_strDesc %= strTo;
 			throw static_cast<IConv::INoConversionException*>(pNew);
 		}
-		
+
 		throw ISystemException::Create(errno);
 	}
 
@@ -130,12 +130,12 @@ uint32_t Converter::ReadBytes(uint32_t lenBytes, byte_t* data)
 {
 	size_t outBytes = lenBytes;
 	char*  outBuf = reinterpret_cast<char*>(data);
-	
+
 	Threading::Guard<Threading::Mutex> guard(m_lock);
 
 	if (!m_ptrInput)
 		return 0;
-	
+
 	for (int last_err = 0;outBytes != 0;)
 	{
 		// Read more...
@@ -165,10 +165,10 @@ uint32_t Converter::ReadBytes(uint32_t lenBytes, byte_t* data)
 			}
 
 			// Clear last error
-			last_err = 0;				
+			last_err = 0;
 		}
 
-		const char* inBuf = m_strIn.c_str();
+		char* inBuf = const_cast<char*>(m_strIn.c_str());
 		size_t inBytes = m_strIn.size();
 		if (iconv(m_cd,&inBuf,&inBytes,&outBuf,&outBytes) == size_t(-1))
 		{
@@ -191,7 +191,7 @@ uint32_t Converter::ReadBytes(uint32_t lenBytes, byte_t* data)
 					pNew->m_strDesc %= m_strFrom;
 					throw static_cast<IConv::IIllegalInputException*>(pNew);
 				}
-			
+
 			default:
 				throw ISystemException::Create(errno);
 			}
@@ -200,7 +200,7 @@ uint32_t Converter::ReadBytes(uint32_t lenBytes, byte_t* data)
 		// Drop off what we have used
 		m_strIn.erase(0,inBuf - m_strIn.c_str());
 	}
-	
+
 	return static_cast<uint32_t>(lenBytes - outBytes);
 }
 
@@ -208,7 +208,7 @@ string_t Converter::ConvertStream(const string_t& strEncoding, IO::IInputStream*
 {
 	SetTranscoding(strEncoding,L"wchar_t");
 	SetInputStream(inStream);
-	
+
 	for (string_t ret;;)
 	{
 		byte_t szBuf[256*sizeof(wchar_t)] = {0};
@@ -224,6 +224,6 @@ string_t Converter::ConvertBuffer(const string_t& strEncoding, uint32_t len, con
 {
 	ObjectPtr<IO::IInputStream> ptrIn;
 	ptrIn.Attach(Create(len,bytes,false));
-	
-	return ConvertStream(strEncoding,ptrIn);	
+
+	return ConvertStream(strEncoding,ptrIn);
 }

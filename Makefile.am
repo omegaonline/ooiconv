@@ -24,7 +24,7 @@ reallyclean: maintainer-clean
 	rm -f @srcdir@/m4/lt~obsolete.m4
 	rm -f @srcdir@/autoheader_dummy.h.in
 	rm -f @srcdir@/autoheader_dummy.h.in~
-	
+
 ####################################
 # Hook to make the ChangeLog
 dist-hook:
@@ -40,12 +40,12 @@ dist-hook:
 	else \
 		echo A git clone is required to generate a ChangeLog >&2; \
 	fi
-	
+
 ####################################
 
 omegadir = @includedir@/Omega
 omega_HEADERS = \
-	include\IConv.h
+	include/IConv.h
 
 omegalibexecdir = @libexecdir@/omegaonline
 
@@ -54,7 +54,7 @@ omegalibexec_LTLIBRARIES = ooiconv.la
 ooiconv_la_SOURCES = \
 	src/Converter.h \
 	src/Converter.cpp
-	
+
 ooiconv_la_CXXFLAGS = $(PTHREAD_CFLAGS) $(INCICONV)
 ooiconv_la_LDFLAGS = -module -no-undefined $(PTHREAD_LIBS)
 
@@ -68,6 +68,6 @@ ooiconv_la_LDFLAGS += -Wl,-l:libcharset.a -Wl,-l:libiconv.a -Wl,-lgcc -Wl,-lming
 else
 
 ooiconv_la_LIBADD = -loocore $(LIBICONV)
-ooiconv_la_LDFLAGS += -release $(VERSION) -rpath /nowhere
+ooiconv_la_LDFLAGS += -release $(VERSION)
 
 endif
