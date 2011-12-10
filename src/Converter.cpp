@@ -168,7 +168,7 @@ uint32_t Converter::ReadBytes(uint32_t lenBytes, byte_t* data)
 			last_err = 0;
 		}
 
-		char* inBuf = const_cast<char*>(m_strIn.c_str());
+		const char* inBuf = m_strIn.c_str();
 		size_t inBytes = m_strIn.size();
 		if (iconv(m_cd,&inBuf,&inBytes,&outBuf,&outBytes) == size_t(-1))
 		{
@@ -222,8 +222,7 @@ string_t Converter::ConvertStream(const string_t& strEncoding, IO::IInputStream*
 
 string_t Converter::ConvertBuffer(const string_t& strEncoding, uint32_t len, const byte_t* bytes)
 {
-	ObjectPtr<IO::IInputStream> ptrIn;
-	ptrIn.Attach(Create(len,bytes,false));
+	ObjectPtr<IO::IInputStream> ptrIn(Create(len,bytes,false));
 
 	return ConvertStream(strEncoding,ptrIn);
 }
