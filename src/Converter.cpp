@@ -93,16 +93,14 @@ Converter::~Converter()
 
 void Converter::SetTranscoding(const string_t& strFrom, const string_t& strTo)
 {
-	iconv_t cd = iconv_open(strTo.c_nstr(),strFrom.c_nstr());
+	iconv_t cd = iconv_open(strTo.c_str(),strFrom.c_str());
 	if (cd == iconv_t(-1))
 	{
 		if (errno == EINVAL)
 		{
 			// No conversion
 			ObjectImpl<NoConversionException>* pNew = ObjectImpl<NoConversionException>::CreateInstance();
-			pNew->m_strDesc = L"Cannot convert from encoding '{0}' to encoding '{1}'";
-			pNew->m_strDesc %= strFrom;
-			pNew->m_strDesc %= strTo;
+			pNew->m_strDesc = Omega::string_t::constant("Cannot convert from encoding '{0}' to encoding '{1}'") % strFrom % strTo;
 			throw static_cast<IConv::INoConversionException*>(pNew);
 		}
 
@@ -120,10 +118,12 @@ void Converter::SetTranscoding(const string_t& strFrom, const string_t& strTo)
 
 void Converter::SetInputStream(IO::IInputStream* pInStream)
 {
+	void* TODO; // This could all be made faster by using a dynamic buffer array rather than a string_t for m_strIn
+
 	Threading::Guard<Threading::Mutex> guard(m_lock);
 
 	m_ptrInput = pInStream;
-	m_strIn.clear();
+	m_strIn.Clear();
 }
 
 uint32_t Converter::ReadBytes(uint32_t lenBytes, byte_t* data)
@@ -139,7 +139,7 @@ uint32_t Converter::ReadBytes(uint32_t lenBytes, byte_t* data)
 	for (int last_err = 0;outBytes != 0;)
 	{
 		// Read more...
-		if (m_strIn.size() < outBytes)
+		if (m_strIn.Length() < outBytes)
 		{
 			// Try not to over-read... obviously this will struggle when the output encoding is wider than the input encoding.
 			byte_t buf[1024] = {0};
@@ -149,7 +149,7 @@ uint32_t Converter::ReadBytes(uint32_t lenBytes, byte_t* data)
 
 			r = m_ptrInput->ReadBytes(uint32_t(r),buf);
 			if (r != 0)
-				m_strIn.append(reinterpret_cast<char*>(buf),r);
+				m_strIn += Omega::string_t(reinterpret_cast<char*>(buf),r);
 			else
 			{
 				// No more...
@@ -157,7 +157,7 @@ uint32_t Converter::ReadBytes(uint32_t lenBytes, byte_t* data)
 				{
 					// Incomplete input
 					ObjectImpl<IncompleteInputException>* pNew = ObjectImpl<IncompleteInputException>::CreateInstance();
-					pNew->m_strDesc = L"Input conversion stopped due to an incomplete character or shift sequence at the end of the input buffer.";
+					pNew->m_strDesc = Omega::string_t::constant("Input conversion stopped due to an incomplete character or shift sequence at the end of the input buffer.");
 					throw static_cast<IConv::IIncompleteInputException*>(pNew);
 				}
 
@@ -169,7 +169,7 @@ uint32_t Converter::ReadBytes(uint32_t lenBytes, byte_t* data)
 		}
 
 		const char* inBuf = m_strIn.c_str();
-		size_t inBytes = m_strIn.size();
+		size_t inBytes = m_strIn.Length();
 		if (iconv(m_cd,&inBuf,&inBytes,&outBuf,&outBytes) == size_t(-1))
 		{
 			if (errno == E2BIG)
@@ -186,9 +186,7 @@ uint32_t Converter::ReadBytes(uint32_t lenBytes, byte_t* data)
 				{
 					// Illegal input
 					ObjectImpl<IllegalInputException>* pNew = ObjectImpl<IllegalInputException>::CreateInstance();
-					pNew->m_strDesc = L"Input conversion stopped due to an input byte '{0}' that does not belong to the input codeset '{1}'.";
-					pNew->m_strDesc %= static_cast<uint8_t>(*inBuf);
-					pNew->m_strDesc %= m_strFrom;
+					pNew->m_strDesc = Omega::string_t::constant("Input conversion stopped due to an input byte '{0}' that does not belong to the input codeset '{1}'.") % static_cast<uint8_t>(*inBuf) % m_strFrom;
 					throw static_cast<IConv::IIllegalInputException*>(pNew);
 				}
 
@@ -198,7 +196,7 @@ uint32_t Converter::ReadBytes(uint32_t lenBytes, byte_t* data)
 		}
 
 		// Drop off what we have used
-		m_strIn.erase(0,inBuf - m_strIn.c_str());
+		m_strIn = m_strIn.Mid(0,inBuf - m_strIn.c_str());
 	}
 
 	return static_cast<uint32_t>(lenBytes - outBytes);
@@ -206,17 +204,17 @@ uint32_t Converter::ReadBytes(uint32_t lenBytes, byte_t* data)
 
 string_t Converter::ConvertStream(const string_t& strEncoding, IO::IInputStream* inStream)
 {
-	SetTranscoding(strEncoding,L"wchar_t");
+	SetTranscoding(strEncoding,Omega::string_t::constant("UTF-8"));
 	SetInputStream(inStream);
 
 	for (string_t ret;;)
 	{
-		byte_t szBuf[256*sizeof(wchar_t)] = {0};
+		byte_t szBuf[1024] = {0};
 		uint32_t r = ReadBytes(uint32_t(sizeof(szBuf)),szBuf);
 		if (r == 0)
 			return ret;
 
-		ret += string_t(reinterpret_cast<const wchar_t*>(szBuf),r / sizeof(wchar_t));
+		ret += string_t(reinterpret_cast<const char*>(szBuf),r);
 	}
 }
 
