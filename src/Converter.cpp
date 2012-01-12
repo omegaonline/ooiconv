@@ -144,10 +144,10 @@ uint32_t Converter::ReadBytes(uint32_t lenBytes, byte_t* data)
 			// Try not to over-read... obviously this will struggle when the output encoding is wider than the input encoding.
 			byte_t buf[1024] = {0};
 			size_t r = outBytes;
-			if (r > 1024)
-				r = 1024;
+			if (r > sizeof(buf))
+				r = sizeof(buf);
 
-			r = m_ptrInput->ReadBytes(uint32_t(r),buf);
+			r = m_ptrInput->ReadBytes(static_cast<uint32_t>(r),buf);
 			if (r != 0)
 				m_strIn += Omega::string_t(reinterpret_cast<char*>(buf),r);
 			else
@@ -160,7 +160,6 @@ uint32_t Converter::ReadBytes(uint32_t lenBytes, byte_t* data)
 					pNew->m_strDesc = Omega::string_t::constant("Input conversion stopped due to an incomplete character or shift sequence at the end of the input buffer.");
 					throw static_cast<IConv::IIncompleteInputException*>(pNew);
 				}
-
 				break;
 			}
 
@@ -212,10 +211,10 @@ string_t Converter::ConvertStream(const string_t& strEncoding, IO::IInputStream*
 	SetTranscoding(strEncoding,Omega::string_t::constant("UTF-8"));
 	SetInputStream(inStream);
 
+	byte_t szBuf[1024] = {0};
 	for (string_t ret;;)
 	{
-		byte_t szBuf[1024] = {0};
-		uint32_t r = ReadBytes(uint32_t(sizeof(szBuf)),szBuf);
+		uint32_t r = ReadBytes(static_cast<uint32_t>(sizeof(szBuf)),szBuf);
 		if (r == 0)
 			return ret;
 
@@ -225,7 +224,7 @@ string_t Converter::ConvertStream(const string_t& strEncoding, IO::IInputStream*
 
 string_t Converter::ConvertBuffer(const string_t& strEncoding, uint32_t len, const byte_t* bytes)
 {
-	ObjectPtr<IO::IInputStream> ptrIn(Create(len,bytes,false));
+	ObjectPtr<IO::IInputStream> ptrIn = IO::IInputStream::Create(len,bytes,false);
 
 	return ConvertStream(strEncoding,ptrIn);
 }
