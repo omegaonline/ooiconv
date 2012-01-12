@@ -100,8 +100,8 @@ AC_ARG_WITH([omega-include-path],
   [OO_CFLAGS="-I$withval"])
 AC_SUBST([OO_CFLAGS])
 
-AC_ARG_WITH([omega-lib-path],
-  [AS_HELP_STRING([--with-omega-lib-path=DIR], [location of the Omega libraries])],
+AC_ARG_WITH([oocore-lib-path],
+  [AS_HELP_STRING([--with-oocore-lib-path=DIR], [location of the OOCore library])],
   [OO_LIBS="-L$withval"])
 AC_SUBST([OO_LIBS])
 
