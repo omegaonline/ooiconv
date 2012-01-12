@@ -45,6 +45,10 @@
 
 #include <iconv.h>
 
+#if defined(HAVE_CONFIG_H)
+#include "ooiconv-autoconf.h"
+#endif
+
 #include <Omega/IO.h>
 #include <OTL/Exception.h>
 

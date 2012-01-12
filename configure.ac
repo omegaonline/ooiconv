@@ -2,7 +2,7 @@ AC_PREREQ(2.61)
 
 AC_INIT(OOIConv,0.1.0)
 AC_CONFIG_SRCDIR([src/Converter.cpp])
-AC_CONFIG_HEADERS([autoheader_dummy.h])
+AC_CONFIG_HEADERS([autoheader_dummy.h src/ooiconv-autoconf.h])
 
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_MACRO_DIR([m4])
@@ -92,6 +92,18 @@ AS_IF([test "x$oo_test_CXXFLAGS" != "xset"],
 	AX_CXXFLAGS_GCC_OPTION([-static-libstdc++])
   ])
 ])
+
+# Get Omega library and include locations
+AC_ARG_WITH([omega-include-path],
+  [AS_HELP_STRING([--with-omega-include-path=DIR],
+    [location of the Omega headers])],
+  [OO_CFLAGS="-I$withval"])
+AC_SUBST([OO_CFLAGS])
+
+AC_ARG_WITH([omega-lib-path],
+  [AS_HELP_STRING([--with-omega-lib-path=DIR], [location of the Omega libraries])],
+  [OO_LIBS="-L$withval"])
+AC_SUBST([OO_LIBS])
 
 # Add debug defines
 AS_IF([test "x$debug" != "xtrue"],[CPPFLAGS="$CPPFLAGS -DNDEBUG"])

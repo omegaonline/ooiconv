@@ -170,7 +170,12 @@ uint32_t Converter::ReadBytes(uint32_t lenBytes, byte_t* data)
 
 		const char* inBuf = m_strIn.c_str();
 		size_t inBytes = m_strIn.Length();
+
+#if defined(ICONV_CONST)
+		if (iconv(m_cd,const_cast<char**>(&inBuf),&inBytes,&outBuf,&outBytes) == size_t(-1))
+#else
 		if (iconv(m_cd,&inBuf,&inBytes,&outBuf,&outBytes) == size_t(-1))
+#endif
 		{
 			if (errno == E2BIG)
 				break;

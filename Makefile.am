@@ -55,19 +55,19 @@ ooiconv_la_SOURCES = \
 	src/Converter.h \
 	src/Converter.cpp
 
-ooiconv_la_CXXFLAGS = $(PTHREAD_CFLAGS) $(INCICONV)
-ooiconv_la_LDFLAGS = -module -no-undefined $(PTHREAD_LIBS)
+ooiconv_la_CXXFLAGS = $(OO_CFLAGS) $(PTHREAD_CFLAGS) $(INCICONV)
+ooiconv_la_LDFLAGS = -module -no-undefined $(PTHREAD_LIBS) 
 
 if WIN32
 
 ooiconv_la_SOURCES += src/OOIConv_res.rc
 
 # All this -Wl,-l shenanigans is to get the static lib of iconv linked into the dll
-ooiconv_la_LDFLAGS += -Wl,-l:libcharset.a -Wl,-l:libiconv.a -Wl,-lgcc -Wl,-lmingwex -Wl,-lmsvcrt -Wl,-lkernel32 -Wl,-l:OOCore.dll.a -avoid-version
+ooiconv_la_LDFLAGS += -Wl,-l:libcharset.a -Wl,-l:libiconv.a -Wl,-lgcc -Wl,-lmingwex -Wl,-lmsvcrt -Wl,-lkernel32 -Wl,$(OO_LIBS) -Wl,-l:OOCore.dll.a -avoid-version
 
 else
 
-ooiconv_la_LIBADD = -loocore $(LIBICONV)
+ooiconv_la_LIBADD = $(OO_LIBS) -loocore $(LIBICONV)
 ooiconv_la_LDFLAGS += -release $(VERSION)
 
 endif
