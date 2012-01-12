@@ -107,7 +107,7 @@ void Converter::SetTranscoding(const string_t& strFrom, const string_t& strTo)
 		throw ISystemException::Create(errno);
 	}
 
-	Threading::Guard<Threading::Mutex> guard(m_lock);
+	Threading::Guard guard(m_lock);
 
 	if (m_cd != iconv_t(-1))
 		iconv_close(m_cd);
@@ -120,7 +120,7 @@ void Converter::SetInputStream(IO::IInputStream* pInStream)
 {
 	void* TODO; // This could all be made faster by using a dynamic buffer array rather than a string_t for m_strIn
 
-	Threading::Guard<Threading::Mutex> guard(m_lock);
+	Threading::Guard guard(m_lock);
 
 	m_ptrInput = pInStream;
 	m_strIn.Clear();
@@ -131,7 +131,7 @@ uint32_t Converter::ReadBytes(uint32_t lenBytes, byte_t* data)
 	size_t outBytes = lenBytes;
 	char*  outBuf = reinterpret_cast<char*>(data);
 
-	Threading::Guard<Threading::Mutex> guard(m_lock);
+	Threading::Guard guard(m_lock);
 
 	if (!m_ptrInput)
 		return 0;
