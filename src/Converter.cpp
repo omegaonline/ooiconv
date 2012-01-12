@@ -82,7 +82,8 @@ namespace
 }
 
 Converter::Converter() :
-		m_cd(iconv_t(-1))
+		m_cd(iconv_t(-1)),
+		m_bufpos(0)
 {}
 
 Converter::~Converter()
@@ -118,12 +119,10 @@ void Converter::SetTranscoding(const string_t& strFrom, const string_t& strTo)
 
 void Converter::SetInputStream(IO::IInputStream* pInStream)
 {
-	void* TODO; // This could all be made faster by using a dynamic buffer array rather than a string_t for m_strIn
-
 	Threading::Guard guard(m_lock);
 
 	m_ptrInput = pInStream;
-	m_strIn.Clear();
+	m_bufpos = 0;
 }
 
 uint32_t Converter::ReadBytes(uint32_t lenBytes, byte_t* data)
@@ -139,17 +138,16 @@ uint32_t Converter::ReadBytes(uint32_t lenBytes, byte_t* data)
 	for (int last_err = 0;outBytes != 0;)
 	{
 		// Read more...
-		if (m_strIn.Length() < outBytes)
+		if (m_bufpos < outBytes)
 		{
 			// Try not to over-read... obviously this will struggle when the output encoding is wider than the input encoding.
-			byte_t buf[1024] = {0};
-			size_t r = outBytes;
-			if (r > sizeof(buf))
-				r = sizeof(buf);
+			size_t r = outBytes - m_bufpos;
+			if (r > sizeof(m_buffer) - m_bufpos)
+				r = sizeof(m_buffer) - m_bufpos;
 
-			r = m_ptrInput->ReadBytes(static_cast<uint32_t>(r),buf);
+			r = m_ptrInput->ReadBytes(static_cast<uint32_t>(r),reinterpret_cast<byte_t*>(m_buffer + m_bufpos));
 			if (r != 0)
-				m_strIn += Omega::string_t(reinterpret_cast<char*>(buf),r);
+				m_bufpos += r;
 			else
 			{
 				// No more...
@@ -167,8 +165,8 @@ uint32_t Converter::ReadBytes(uint32_t lenBytes, byte_t* data)
 			last_err = 0;
 		}
 
-		const char* inBuf = m_strIn.c_str();
-		size_t inBytes = m_strIn.Length();
+		const char* inBuf = m_buffer;
+		size_t inBytes = m_bufpos;
 
 #if defined(ICONV_CONST)
 		if (iconv(m_cd,const_cast<char**>(&inBuf),&inBytes,&outBuf,&outBytes) == size_t(-1))
@@ -200,7 +198,8 @@ uint32_t Converter::ReadBytes(uint32_t lenBytes, byte_t* data)
 		}
 
 		// Drop off what we have used
-		m_strIn = m_strIn.Mid(0,inBuf - m_strIn.c_str());
+		memmove(m_buffer,inBuf,inBytes);
+		m_bufpos = inBytes;
 	}
 
 	return static_cast<uint32_t>(lenBytes - outBytes);

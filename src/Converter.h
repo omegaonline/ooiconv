@@ -84,8 +84,9 @@ private:
 	Omega::Threading::Mutex                 m_lock;
 	iconv_t                                 m_cd;
 	OTL::ObjectPtr<Omega::IO::IInputStream> m_ptrInput;	
-	Omega::string_t                         m_strIn;
 	Omega::string_t                         m_strFrom;
+	char                                    m_buffer[1024];
+	size_t                                  m_bufpos;
 
 	// IConverter methods
 public:
