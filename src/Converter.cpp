@@ -165,14 +165,10 @@ uint32_t Converter::ReadBytes(uint32_t lenBytes, byte_t* data)
 			last_err = 0;
 		}
 
-		const char* inBuf = m_buffer;
+		ICONV_CONST char* inBuf = m_buffer;
 		size_t inBytes = m_bufpos;
 
-#if defined(ICONV_CONST)
-		if (iconv(m_cd,const_cast<char**>(&inBuf),&inBytes,&outBuf,&outBytes) == size_t(-1))
-#else
 		if (iconv(m_cd,&inBuf,&inBytes,&outBuf,&outBytes) == size_t(-1))
-#endif
 		{
 			if (errno == E2BIG)
 				break;
