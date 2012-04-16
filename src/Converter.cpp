@@ -51,36 +51,6 @@ OMEGA_DEFINE_OID(Omega::IConv, OID_IConv, "{77A15551-E8F4-46D1-8991-7CDC07BE8EC3
 using namespace Omega;
 using namespace OTL;
 
-namespace
-{
-	class NoConversionException :
-			public ExceptionImpl<IConv::INoConversionException>
-	{
-	public:
-		BEGIN_INTERFACE_MAP(NoConversionException)
-			INTERFACE_ENTRY_CHAIN(ExceptionImpl<IConv::INoConversionException>)
-		END_INTERFACE_MAP()
-	};
-
-	class IllegalInputException :
-			public ExceptionImpl<IConv::IIllegalInputException>
-	{
-	public:
-		BEGIN_INTERFACE_MAP(IllegalInputException)
-			INTERFACE_ENTRY_CHAIN(ExceptionImpl<IConv::IIllegalInputException>)
-		END_INTERFACE_MAP()
-	};
-
-	class IncompleteInputException :
-			public ExceptionImpl<IConv::IIncompleteInputException>
-	{
-	public:
-		BEGIN_INTERFACE_MAP(IncompleteInputException)
-			INTERFACE_ENTRY_CHAIN(ExceptionImpl<IConv::IIncompleteInputException>)
-		END_INTERFACE_MAP()
-	};
-}
-
 Converter::Converter() :
 		m_cd(iconv_t(-1)),
 		m_bufpos(0)
@@ -100,9 +70,7 @@ void Converter::SetTranscoding(const string_t& strFrom, const string_t& strTo)
 		if (errno == EINVAL)
 		{
 			// No conversion
-			ObjectImpl<NoConversionException>* pNew = ObjectImpl<NoConversionException>::CreateInstance();
-			pNew->m_strDesc = Omega::string_t::constant("Cannot convert from encoding '{0}' to encoding '{1}'") % strFrom % strTo;
-			throw static_cast<IConv::INoConversionException*>(pNew);
+			throw INotFoundException::Create(string_t::constant("Cannot find suitable conversion from encoding '{0}' to encoding '{1}'") % strFrom % strTo);
 		}
 
 		throw ISystemException::Create(errno);
@@ -152,12 +120,7 @@ uint32_t Converter::ReadBytes(uint32_t lenBytes, byte_t* data)
 			{
 				// No more...
 				if (last_err == EINVAL)
-				{
-					// Incomplete input
-					ObjectImpl<IncompleteInputException>* pNew = ObjectImpl<IncompleteInputException>::CreateInstance();
-					pNew->m_strDesc = Omega::string_t::constant("Input conversion stopped due to an incomplete character or shift sequence at the end of the input buffer.");
-					throw static_cast<IConv::IIncompleteInputException*>(pNew);
-				}
+					throw INotFoundException::Create(string_t::constant("Conversion stopped due to an incomplete character or shift sequence at the end of the input buffer."));
 				break;
 			}
 
@@ -181,12 +144,8 @@ uint32_t Converter::ReadBytes(uint32_t lenBytes, byte_t* data)
 				break;
 
 			case EILSEQ:
-				{
-					// Illegal input
-					ObjectImpl<IllegalInputException>* pNew = ObjectImpl<IllegalInputException>::CreateInstance();
-					pNew->m_strDesc = Omega::string_t::constant("Input conversion stopped due to an input byte '{0}' that does not belong to the input codeset '{1}'.") % static_cast<uint8_t>(*inBuf) % m_strFrom;
-					throw static_cast<IConv::IIllegalInputException*>(pNew);
-				}
+				// Illegal input
+				throw INotFoundException::Create(string_t::constant("Conversion stopped due to an input byte '{0}' that does not belong to the input codeset '{1}'.") % static_cast<uint8_t>(*inBuf) % m_strFrom);
 
 			default:
 				throw ISystemException::Create(errno);

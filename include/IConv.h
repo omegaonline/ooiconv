@@ -60,18 +60,6 @@ namespace Omega
 			virtual string_t ConvertStream(const string_t& strEncoding, IO::IInputStream* pInStream) = 0;
 			virtual string_t ConvertBuffer(const string_t& strEncoding, uint32_t len, const byte_t* bytes) = 0;
 		};
-		
-		interface INoConversionException : public IException
-		{
-		};
-
-		interface IIllegalInputException : public IException
-		{
-		};
-
-		interface IIncompleteInputException : public IException
-		{
-		};
 	}
 }
 
@@ -91,27 +79,6 @@ OMEGA_DEFINE_INTERFACE
 	// Methods
 	OMEGA_METHOD(string_t,ConvertStream,2,((in),const string_t&,strEncoding,(in),IO::IInputStream*,pInStream))
 	OMEGA_METHOD(string_t,ConvertBuffer,3,((in),const string_t&,strEncoding,(in),uint32_t,len,(in)(size_is(len)),const byte_t*,bytes))
-)
-
-OMEGA_DEFINE_INTERFACE_DERIVED
-(
-	Omega::IConv, INoConversionException, Omega, IException, "{4DD88926-34CE-4B8F-8917-D060F3BB9C95}",
-
-	OMEGA_NO_METHODS()
-)
-
-OMEGA_DEFINE_INTERFACE_DERIVED
-(
-	Omega::IConv, IIllegalInputException, Omega, IException, "{33ECC494-91C1-4D12-A301-FCFA8856A2EE}",
-
-	OMEGA_NO_METHODS()
-)
-
-OMEGA_DEFINE_INTERFACE_DERIVED
-(
-	Omega::IConv, IIncompleteInputException, Omega, IException, "{C27AF18A-BC91-48DD-8591-EAD2853ACEAD}",
-
-	OMEGA_NO_METHODS()
 )
 
 #endif // OMEGA_GNU_ICONV_H_INCLUDED_
