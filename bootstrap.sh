@@ -1,6 +1,6 @@
 #! /bin/sh
 echo Running autotools...
-mkdir build-aux && \
+if !(test -d build-aux); then mkdir build-aux; fi && \
 aclocal -I m4 && \
 autoheader && \
 touch build-aux/config.rpath && \
