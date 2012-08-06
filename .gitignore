@@ -35,3 +35,7 @@ lt-*.c
 # Windows stuff
 *.exe
 *.dll
+
+# Eclipse stuff
+.cproject
+.project
