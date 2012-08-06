@@ -49,6 +49,7 @@
 #include "ooiconv-autoconf.h"
 #endif
 
+#include <Omega/TypeInfo.h>
 #include <Omega/IO.h>
 #include <OTL/Exception.h>
 
