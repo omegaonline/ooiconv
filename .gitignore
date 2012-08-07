@@ -39,3 +39,5 @@ lt-*.c
 # Eclipse stuff
 .cproject
 .project
+.settings/
+/debug
